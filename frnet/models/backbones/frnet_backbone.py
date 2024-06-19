@@ -129,16 +129,17 @@ class FRNetBackbone(BaseModule):
         self.act_cfg = act_cfg
         # self.stem = self._make_stem_layer(in_channels, stem_channels)
 
+        in_chans = in_channels
         self.range_img_size = (64, 512)
         self.patch_size = (2, 8)
         self.GS_H, self.GS_W = self.range_img_size[0] // self.patch_size[0], self.range_img_size[1] // self.patch_size[1]
         self.stem = MaskedAutoencoderViT(
             patch_size=16, embed_dim=embed_dim, depth=vit_depth, num_heads=num_heads,
             decoder_embed_dim=decoder_embed_dim, decoder_depth=decoder_depth, decoder_num_heads=decoder_num_heads,
-            mlp_ratio=mlp_ratio, norm_layer=nn.LayerNorm, in_chans=5, img_with_size=self.range_img_size, out_chans=5, with_patch_2d=(2, 8), norm_pix_loss=True,
+            mlp_ratio=mlp_ratio, norm_layer=nn.LayerNorm, in_chans=in_chans, img_with_size=self.range_img_size, out_chans=5, with_patch_2d=(2, 8), norm_pix_loss=True,
             patch_model='ConvStem', hidden_dim=skip_filters
         )
-        self.upconv = UpConvBlock(embed_dim, embed_dim)
+        self.upconv = UpConvBlock(embed_dim, stem_channels)
 
         self.point_stem = self._make_point_layer(point_in_channels,
                                                  stem_channels)
@@ -199,6 +200,8 @@ class FRNetBackbone(BaseModule):
             self.add_module(point_layer_name, point_fuse_layer)
             self.fuse_layers.append(layer_name)
             self.point_fuse_layers.append(point_layer_name)
+        
+        self._load_part_param_from_file()
 
     def _make_stem_layer(self, in_channels: int,
                          out_channels: int) -> nn.Module:
@@ -318,6 +321,15 @@ class FRNetBackbone(BaseModule):
                     norm_cfg=norm_cfg,
                     act_cfg=act_cfg))
         return nn.Sequential(*layers)
+
+    def _load_part_param_from_file(self):
+        model_checkpoint = torch.load('/home/yanqiao/FRNet/pretrain/frnet-semantickitti_seg.pth')
+        model_state_dict = model_checkpoint['state_dict']
+        for param in self.state_dict():
+            model_param = 'backbone.' + param
+            if model_param in model_state_dict and self.state_dict()[param].size() == model_state_dict[model_param].size():
+                self.state_dict()[param] = model_state_dict[model_param]
+                print('initing with param: ', model_param)
 
     def forward_vit_encode(self, x):
         range_latent_full, range_mask_full, range_ids_restore_full, range_skip = self.stem.forward_encoder(x, 0)

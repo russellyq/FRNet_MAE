@@ -36,6 +36,16 @@ class FRHead(Base3DDecodeHead):
                     build_norm_layer(norm_cfg, out_channels)[1],
                     nn.ReLU(inplace=True)))
             in_channels = out_channels
+        self._load_part_param_from_file()
+    
+    def _load_part_param_from_file(self):
+        model_checkpoint = torch.load('/home/yanqiao/FRNet/pretrain/frnet-semantickitti_seg.pth')
+        model_state_dict = model_checkpoint['state_dict']
+        for param in self.state_dict():
+            model_param = 'decode_head.' + param
+            if model_param in model_state_dict and self.state_dict()[param].size() == model_state_dict[model_param].size():
+                self.state_dict()[param] = model_state_dict[model_param]
+                print('initing with param: ', model_param)
 
     def build_conv_seg(self, channels: int, num_classes: int,
                        kernel_size: int) -> nn.Module:

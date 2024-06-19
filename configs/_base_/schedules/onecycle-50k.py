@@ -1,4 +1,4 @@
-lr = 0.01
+lr = 0.005
 optim_wrapper = dict(
     type='AmpOptimWrapper',
     loss_scale='dynamic',
@@ -19,5 +19,5 @@ param_scheduler = [
 train_cfg = dict(type='IterBasedTrainLoop', max_iters=50000, val_interval=1000)
 val_cfg = dict()
 test_cfg = dict()
-
+find_unused_parameters=True
 auto_scale_lr = dict(enable=False, base_batch_size=16)

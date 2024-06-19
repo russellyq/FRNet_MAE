@@ -73,6 +73,18 @@ class FrustumFeatureEncoder(nn.Module):
             self.compression_layers = nn.Sequential(
                 nn.Linear(feat_channels[-1], feat_compression),
                 nn.ReLU(inplace=True))
+        
+        self._load_part_param_from_file()
+        
+    def _load_part_param_from_file(self):
+        model_checkpoint = torch.load('/home/yanqiao/FRNet/pretrain/frnet-semantickitti_seg.pth')
+        model_state_dict = model_checkpoint['state_dict']
+        for param in self.state_dict():
+            model_param = 'voxel_encoder.' + param
+            if model_param in model_state_dict and self.state_dict()[param].size() == model_state_dict[model_param].size():
+                self.state_dict()[param] = model_state_dict[model_param]
+                print('initing with param: ', model_param)
+
 
     def forward(self, voxel_dict: dict) -> dict:
         features = voxel_dict['voxels']
